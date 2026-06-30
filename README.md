@@ -25,17 +25,52 @@ npm run build
 
 ## Running
 
+### Local Development (HTTP API)
+
 ```bash
 npm start
 ```
 
-For development with hot reload:
+The HTTP API will be available at:
+- Health check: `http://localhost:3000/health`
+- Tools list: `http://localhost:3000/tools`
+- Tool endpoints: `http://localhost:3000/tools/{tool_name}`
+
+### Local Development (MCP stdio)
+
+For local MCP client integration via stdio:
 
 ```bash
-npm run dev
+npm run start:stdio
 ```
 
-## MCP Configuration
+## Deployment
+
+### Vercel (HTTP API)
+
+The server is deployed on Vercel at:
+- **Production**: https://clinicaltrials-mcp-server-three.vercel.app
+- **Health check**: https://clinicaltrials-mcp-server-three.vercel.app/health
+- **Tools list**: https://clinicaltrials-mcp-server-three.vercel.app/tools
+
+### MCP Configuration
+
+#### For HTTP API (Vercel)
+
+Configure your MCP client to use the HTTP endpoints:
+
+```json
+{
+  "mcpServers": {
+    "clinicaltrials": {
+      "url": "https://clinicaltrials-mcp-server-three.vercel.app",
+      "transport": "http"
+    }
+  }
+}
+```
+
+#### For Local stdio
 
 Add this server to your MCP client configuration:
 
