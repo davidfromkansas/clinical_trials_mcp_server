@@ -8,9 +8,9 @@ This document describes how the MCP server tools are organized by intent and use
 **Purpose**: Enable users to explore and find clinical trials based on criteria.
 
 **Tools**:
-- `search_clinical_trials_by_criteria` - Search trials with filters (condition, status, phase, etc.)
-- `get_available_search_filters` - Discover available filter options
-- `get_database_statistics` - Get database size and counts
+- `clinicaltrials_search_studies` - Search trials with filters (condition, status, phase, etc.)
+- `clinicaltrials_list_search_areas` - Discover available filter options
+- `clinicaltrials_get_stats` - Get database size and counts
 
 **When to use**: When users want to find trials matching specific criteria, understand search capabilities, or get context about the database scale.
 
@@ -24,8 +24,8 @@ This document describes how the MCP server tools are organized by intent and use
 **Purpose**: Retrieve comprehensive information about specific trials.
 
 **Tools**:
-- `retrieve_detailed_study_by_nct_id` - Get full study details by NCT ID
-- `get_available_data_fields_metadata` - Understand data structure
+- `clinicaltrials_get_study` - Get full study details by NCT ID
+- `clinicaltrials_list_data_fields` - Understand data structure
 
 **When to use**: When users have a specific trial ID and need complete information, or want to understand what data is available.
 
@@ -38,7 +38,7 @@ This document describes how the MCP server tools are organized by intent and use
 **Purpose**: Provide system-level information about the API.
 
 **Tools**:
-- `get_api_version_info` - Get API version and metadata
+- `clinicaltrials_get_api_version` - Get API version and metadata
 
 **When to use**: For debugging, compatibility checks, or system monitoring.
 
@@ -71,13 +71,13 @@ User intent analysis:
 ### Tool Selection Within Groups
 
 **Within Discovery group**:
-- If user provides specific filters → `search_clinical_trials_by_criteria`
-- If user asks about available filters → `get_available_search_filters`
-- If user asks about counts/size → `get_database_statistics`
+- If user provides specific filters → `clinicaltrials_search_studies`
+- If user asks about available filters → `clinicaltrials_list_search_areas`
+- If user asks about counts/size → `clinicaltrials_get_stats`
 
 **Within Detail Retrieval group**:
-- If user provides NCT ID → `retrieve_detailed_study_by_nct_id`
-- If user asks about data structure → `get_available_data_fields_metadata`
+- If user provides NCT ID → `clinicaltrials_get_study`
+- If user asks about data structure → `clinicaltrials_list_data_fields`
 
 ## Benefits of Tool Grouping
 

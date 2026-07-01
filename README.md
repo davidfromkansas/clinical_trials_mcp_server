@@ -87,32 +87,34 @@ Add this server to your MCP client configuration:
 
 ## Available Tools
 
-### search_studies
+All tools are read-only (annotated `readOnlyHint: true`) and return both text and `structuredContent`.
 
-Search clinical trials with filters.
+### clinicaltrials_search_studies
+
+Search clinical trials with filters. Returns paginated summaries plus an accurate `totalCount` and `hasMore` flag.
 
 **Parameters:**
-- `queryTerm` (string, optional): Full-text search term
-- `status` (string, optional): Trial status (RECRUITING, COMPLETED, ACTIVE_NOT_RECRUITING, etc.)
-- `phase` (string, optional): Clinical trial phase (PHASE1, PHASE2, PHASE3, etc.)
-- `condition` (string, optional): Medical condition or disease
-- `intervention` (string, optional): Intervention or treatment type
-- `leadSponsor` (string, optional): Lead sponsor name
-- `studyType` (string, optional): Study type (INTERVENTIONAL, OBSERVATIONAL, EXPANDED_ACCESS)
-- `pageSize` (number, optional): Results per page (1-1000, default: 50)
-- `pageToken` (string, optional): Pagination token for next page
+- `query` (string, optional): Full-text search term (maps to `query.term`)
+- `status` (enum, optional): Recruitment status (RECRUITING, COMPLETED, ACTIVE_NOT_RECRUITING, etc.)
+- `phase` (enum, optional): EARLY_PHASE1, PHASE1, PHASE2, PHASE3, PHASE4
+- `condition` (string, optional): Medical condition or disease (maps to `query.cond`)
+- `intervention` (string, optional): Intervention or treatment (maps to `query.intr`)
+- `leadSponsor` (string, optional): Lead sponsor name (maps to `query.spons`)
+- `studyType` (enum, optional): INTERVENTIONAL, OBSERVATIONAL, EXPANDED_ACCESS
+- `pageSize` (number, optional): Results per page (1-1000, default: 20)
+- `pageToken` (string, optional): Pagination token for the next page
 
 **Example:**
 ```json
 {
-  "queryTerm": "diabetes",
+  "query": "diabetes",
   "status": "RECRUITING",
   "phase": "PHASE2",
   "pageSize": 10
 }
 ```
 
-### get_study
+### clinicaltrials_get_study
 
 Get detailed information about a specific clinical trial by NCT ID.
 
@@ -126,26 +128,26 @@ Get detailed information about a specific clinical trial by NCT ID.
 }
 ```
 
-### get_study_fields
+### clinicaltrials_list_data_fields
 
-Get metadata about all available data fields in ClinicalTrials.gov study records.
-
-**Parameters:** None
-
-### get_search_areas
-
-Get available search areas and filters for querying clinical trials.
+List the available data fields in ClinicalTrials.gov study records.
 
 **Parameters:** None
 
-### get_dataset_stats
+### clinicaltrials_list_search_areas
+
+List available search areas and filters for querying clinical trials.
+
+**Parameters:** None
+
+### clinicaltrials_get_stats
 
 Get statistics about the ClinicalTrials.gov database.
 
 **Parameters:**
-- `queryTerm` (string, optional): Query term to filter statistics
+- `query` (string, optional): Search term to scope the statistics
 
-### get_api_version
+### clinicaltrials_get_api_version
 
 Get the ClinicalTrials.gov API version information.
 

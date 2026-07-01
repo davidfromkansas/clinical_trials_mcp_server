@@ -40,12 +40,12 @@ Once configured, you can ask Cursor to:
 - Health check: `https://clinicaltrials-mcp-server-three.vercel.app/health`
 
 The server exposes these MCP tools:
-- `search_clinical_trials_by_criteria`
-- `retrieve_detailed_study_by_nct_id`
-- `get_available_data_fields_metadata`
-- `get_available_search_filters`
-- `get_database_statistics`
-- `get_api_version_info`
+- `clinicaltrials_search_studies`
+- `clinicaltrials_get_study`
+- `clinicaltrials_list_data_fields`
+- `clinicaltrials_list_search_areas`
+- `clinicaltrials_get_stats`
+- `clinicaltrials_get_api_version`
 
 ### Troubleshooting
 
