@@ -15,7 +15,7 @@ export async function handleGetSearchAreas(
 ): Promise<{ content: Array<{ type: string; text: string }> }> {
   const searchAreas = await client.getSearchAreas();
   
-  const areas = searchAreas.areas.map((area: any) => ({
+  const areas = (searchAreas.areas || []).map((area: any) => ({
     name: area.name,
     displayName: area.displayName,
     type: area.type,
