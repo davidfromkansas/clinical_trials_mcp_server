@@ -153,6 +153,18 @@ Get the ClinicalTrials.gov API version information.
 
 **Parameters:** None
 
+### clinicaltrials_search_studies_map
+
+Search trials and render their locations as an **interactive world map** (an [MCP App](https://modelcontextprotocol.io/docs/extensions/apps) using `@modelcontextprotocol/ext-apps`). Markers are colored by recruitment status and clustered; clicking a marker shows trial details and can open the full study. Re-call with refined filters to update the same map. Also returns a text summary as a fallback for clients that don't render MCP Apps.
+
+**Parameters:**
+- `query`, `condition`, `intervention`, `leadSponsor` (string, optional): search terms
+- `country` (string, optional): location term (country/city; maps to `query.locn`)
+- `status` (enum, optional), `phase` (enum, optional), `studyType` (enum, optional): filters
+- `pageSize` (number, optional): trials to plot (1-200, default 50)
+
+**UI resource:** `ui://clinicaltrials/map` (`text/html;profile=mcp-app`). Uses each site's `geoPoint` coordinates from the API. Note: MCP Apps rendering is host-dependent — reliably renders in Goose / VS Code Copilot / Postman / MCPJam; Claude may currently show only the text fallback.
+
 ## API Reference
 
 This server uses the [ClinicalTrials.gov Data API v2](https://clinicaltrials.gov/data-api/api), which is a public, unauthenticated REST API.
