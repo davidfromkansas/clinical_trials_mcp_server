@@ -2,67 +2,13 @@
 
 ## Adding to Devin
 
-Devin (Autonomous AI Software Engineer) supports MCP servers for extending its capabilities. Here's how to add the ClinicalTrials MCP server:
+Devin (Autonomous AI Software Engineer) supports MCP servers for extending its capabilities. Here's how to add the ClinicalTrials MCP server using the hosted HTTP API:
 
-### Step 1: Clone or Download the Server
-
-If you haven't already, clone the repository:
-
-```bash
-git clone https://github.com/davidfromkansas/clinical_trials_mcp_server.git
-cd clinical_trials_mcp_server
-npm install
-npm run build
-```
-
-### Step 2: Configure Devin
+### Step 1: Configure Devin
 
 Devin's MCP configuration is typically done through project-level or workspace-level settings. Add the following to your Devin configuration file:
 
 **For project-level configuration** (create `.devin/mcp.json` in your project):
-
-```json
-{
-  "mcpServers": {
-    "clinicaltrials": {
-      "command": "node",
-      "args": ["/Users/david_lietjauw/CascadeProjects/clinicaltrials-mcp-server/dist/server.js"]
-    }
-  }
-}
-```
-
-**For workspace-level configuration** (in your Devin settings):
-
-```json
-{
-  "mcpServers": {
-    "clinicaltrials": {
-      "command": "node",
-      "args": ["/Users/david_lietjauw/CascadeProjects/clinicaltrials-mcp-server/dist/server.js"]
-    }
-  }
-}
-```
-
-**Important**: Update the path to match your actual local path to the `dist/server.js` file.
-
-### Step 3: Restart Devin
-
-After adding the configuration, restart Devin to load the MCP server.
-
-### Step 4: Use the Tools
-
-Once configured, you can ask Devin to:
-- "Search for diabetes clinical trials"
-- "Find recruiting phase 2 trials"
-- "Tell me about study NCT04000009"
-- "What filters can I use to search clinical trials?"
-- "Help me build an app that displays clinical trial data"
-
-### Alternative: Use HTTP API
-
-If you prefer to use the HTTP API instead of local stdio, you can configure Devin to use the Vercel endpoint:
 
 ```json
 {
@@ -75,7 +21,43 @@ If you prefer to use the HTTP API instead of local stdio, you can configure Devi
 }
 ```
 
-Note: HTTP transport support depends on Devin's current MCP implementation. If not supported, use the stdio configuration above.
+**For workspace-level configuration** (in your Devin settings):
+
+```json
+{
+  "mcpServers": {
+    "clinicaltrials": {
+      "url": "https://clinicaltrials-mcp-server-three.vercel.app",
+      "transport": "http"
+    }
+  }
+}
+```
+
+### Step 2: Restart Devin
+
+After adding the configuration, restart Devin to load the MCP server.
+
+### Step 3: Use the Tools
+
+Once configured, you can ask Devin to:
+- "Search for diabetes clinical trials"
+- "Find recruiting phase 2 trials"
+- "Tell me about study NCT04000009"
+- "What filters can I use to search clinical trials?"
+- "Help me build an app that displays clinical trial data"
+
+### Available Endpoints
+
+The hosted API provides the following endpoints:
+- Health check: https://clinicaltrials-mcp-server-three.vercel.app/health
+- Tools list: https://clinicaltrials-mcp-server-three.vercel.app/tools
+- Search trials: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/search_clinical_trials_by_criteria
+- Get study: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/retrieve_detailed_study_by_nct_id
+- Get fields: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_available_data_fields_metadata
+- Get filters: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_available_search_filters
+- Get stats: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/get_database_statistics
+- API version: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_api_version_info
 
 ### Example Devin Workflow
 
@@ -95,21 +77,39 @@ With the MCP server configured, Devin can:
 
 ### Troubleshooting
 
-**Server not starting**:
-- Ensure Node.js is installed: `node --version`
-- Verify the path to `dist/server.js` is correct
-- Check that dependencies are installed: `npm install`
-- Build the project: `npm run build`
+**Server not responding**:
+- Check if Devin supports HTTP transport for MCP
+- Verify the URL is accessible: `curl https://clinicaltrials-mcp-server-three.vercel.app/health`
+- Check Devin's MCP settings for any errors
 
 **Tools not appearing**:
 - Restart Devin after configuration
+- Verify HTTP transport is supported in your Devin version
 - Check Devin's MCP settings for any errors
-- Verify the server runs locally: `npm run start:stdio`
 
-**Path issues**:
-- Use absolute paths in the configuration
-- On macOS, paths start with `/Users/yourname/...`
-- On Windows, paths use backslashes or forward slashes
+**Alternative: Local stdio**
+
+If Devin doesn't support HTTP transport, you can use the local stdio version:
+
+```bash
+git clone https://github.com/davidfromkansas/clinical_trials_mcp_server.git
+cd clinical_trials_mcp_server
+npm install
+npm run build
+```
+
+Then configure:
+
+```json
+{
+  "mcpServers": {
+    "clinicaltrials": {
+      "command": "node",
+      "args": ["/absolute/path/to/clinicaltrials-mcp-server/dist/server.js"]
+    }
+  }
+}
+```
 
 ### Devin-Specific Considerations
 

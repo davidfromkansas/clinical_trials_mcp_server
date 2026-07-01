@@ -2,54 +2,14 @@
 
 ## Adding to Cursor
 
-Cursor supports MCP servers through its settings. Here's how to add the ClinicalTrials MCP server:
+Cursor supports MCP servers through its settings. Here's how to add the ClinicalTrials MCP server using the hosted HTTP API:
 
-### Step 1: Clone or Download the Server
-
-If you haven't already, clone the repository:
-
-```bash
-git clone https://github.com/davidfromkansas/clinical_trials_mcp_server.git
-cd clinical_trials_mcp_server
-npm install
-npm run build
-```
-
-### Step 2: Configure Cursor
+### Step 1: Configure Cursor
 
 1. Open Cursor
 2. Go to Settings (Cmd+, or Ctrl+,)
 3. Navigate to "MCP Servers" or "Model Context Protocol"
 4. Add a new server with the following configuration:
-
-```json
-{
-  "mcpServers": {
-    "clinicaltrials": {
-      "command": "node",
-      "args": ["/Users/david_lietjauw/CascadeProjects/clinicaltrials-mcp-server/dist/server.js"]
-    }
-  }
-}
-```
-
-**Important**: Update the path to match your actual local path to the `dist/server.js` file.
-
-### Step 3: Restart Cursor
-
-After adding the configuration, restart Cursor to load the MCP server.
-
-### Step 4: Use the Tools
-
-Once configured, you can ask Cursor to:
-- "Search for diabetes clinical trials"
-- "Find recruiting phase 2 trials"
-- "Tell me about study NCT04000009"
-- "What filters can I use to search clinical trials?"
-
-### Alternative: Use HTTP API
-
-If you prefer to use the HTTP API instead of local stdio, you can configure Cursor to use the Vercel endpoint (if Cursor supports HTTP transport):
 
 ```json
 {
@@ -62,22 +22,62 @@ If you prefer to use the HTTP API instead of local stdio, you can configure Curs
 }
 ```
 
-Note: HTTP transport support depends on Cursor's current MCP implementation. If not supported, use the stdio configuration above.
+### Step 2: Restart Cursor
+
+After adding the configuration, restart Cursor to load the MCP server.
+
+### Step 3: Use the Tools
+
+Once configured, you can ask Cursor to:
+- "Search for diabetes clinical trials"
+- "Find recruiting phase 2 trials"
+- "Tell me about study NCT04000009"
+- "What filters can I use to search clinical trials?"
+
+### Available Endpoints
+
+The hosted API provides the following endpoints:
+- Health check: https://clinicaltrials-mcp-server-three.vercel.app/health
+- Tools list: https://clinicaltrials-mcp-server-three.vercel.app/tools
+- Search trials: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/search_clinical_trials_by_criteria
+- Get study: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/retrieve_detailed_study_by_nct_id
+- Get fields: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_available_data_fields_metadata
+- Get filters: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_available_search_filters
+- Get stats: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/get_database_statistics
+- API version: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_api_version_info
 
 ### Troubleshooting
 
-**Server not starting**:
-- Ensure Node.js is installed: `node --version`
-- Verify the path to `dist/server.js` is correct
-- Check that dependencies are installed: `npm install`
-- Build the project: `npm run build`
+**Server not responding**:
+- Check if Cursor supports HTTP transport for MCP
+- Verify the URL is accessible: `curl https://clinicaltrials-mcp-server-three.vercel.app/health`
+- Check Cursor's MCP settings for any errors
 
 **Tools not appearing**:
 - Restart Cursor after configuration
+- Verify HTTP transport is supported in your Cursor version
 - Check Cursor's MCP settings for any errors
-- Verify the server runs locally: `npm run start:stdio`
 
-**Path issues**:
-- Use absolute paths in the configuration
-- On macOS, paths start with `/Users/yourname/...`
-- On Windows, paths use backslashes or forward slashes
+**Alternative: Local stdio**
+
+If Cursor doesn't support HTTP transport, you can use the local stdio version:
+
+```bash
+git clone https://github.com/davidfromkansas/clinical_trials_mcp_server.git
+cd clinical_trials_mcp_server
+npm install
+npm run build
+```
+
+Then configure:
+
+```json
+{
+  "mcpServers": {
+    "clinicaltrials": {
+      "command": "node",
+      "args": ["/absolute/path/to/clinicaltrials-mcp-server/dist/server.js"]
+    }
+  }
+}
+```
