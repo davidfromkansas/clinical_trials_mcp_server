@@ -5,6 +5,23 @@ import { createMcpServer } from './mcp-server.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CORS: required for browser-based MCP clients like Claude web (claude.ai).
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Accept, Authorization, Last-Event-ID, mcp-session-id, mcp-protocol-version'
+  );
+  res.setHeader('Access-Control-Expose-Headers', 'mcp-session-id, mcp-protocol-version');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
+
 app.use(express.json());
 
 // Handle an MCP request in stateless mode: a fresh server + transport per request.
