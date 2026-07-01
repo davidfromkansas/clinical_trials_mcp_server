@@ -6,6 +6,7 @@ import { registerListDataFields } from './tools/get-study-fields.js';
 import { registerListSearchAreas } from './tools/get-search-areas.js';
 import { registerGetStats } from './tools/get-dataset-stats.js';
 import { registerGetApiVersion } from './tools/get-api-version.js';
+import { registerSearchStudiesMap } from './tools/search-studies-map.js';
 
 export function createMcpServer(): McpServer {
   const client = new ClinicalTrialsAPIClient();
@@ -21,6 +22,7 @@ export function createMcpServer(): McpServer {
   registerListSearchAreas(server, client);
   registerGetStats(server, client);
   registerGetApiVersion(server, client);
+  registerSearchStudiesMap(server, client);
 
   return server;
 }

@@ -42,6 +42,7 @@ export interface SearchStudiesParams {
   intervention?: string;
   leadSponsor?: string;
   studyType?: StudyType;
+  locationTerm?: string;
   pageSize?: number;
   pageToken?: string;
 }
@@ -182,6 +183,7 @@ export class ClinicalTrialsAPIClient {
     if (params.condition) apiParams['query.cond'] = params.condition;
     if (params.intervention) apiParams['query.intr'] = params.intervention;
     if (params.leadSponsor) apiParams['query.spons'] = params.leadSponsor;
+    if (params.locationTerm) apiParams['query.locn'] = params.locationTerm;
     if (params.status) apiParams['filter.overallStatus'] = params.status;
 
     const aggFilters: string[] = [];

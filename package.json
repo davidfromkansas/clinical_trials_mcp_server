@@ -5,6 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
+    "inline-ui": "node scripts/inline-ui.mjs",
+    "prebuild": "node scripts/inline-ui.mjs",
     "build": "tsc",
     "start": "node dist/http-server.js",
     "start:stdio": "node dist/server.js",
@@ -21,6 +23,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.4",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@types/express": "^5.0.6",
     "@types/node": "^26.0.1",

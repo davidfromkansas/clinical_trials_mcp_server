@@ -17,7 +17,9 @@ export interface Study {
         date: string;
       };
     };
-    designModule: {
+    designModule?: {
+      phases?: string[];
+      studyType?: string;
     };
     armsInterventionsModule?: {
       arms?: Arm[];
@@ -62,20 +64,15 @@ export interface Condition {
 }
 
 export interface Location {
-    facility: {
-        name: string;
-        address: {
-            city: string;
-            state: string;
-            country: string;
-            zip?: string;
-        };
-    };
+    facility?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    zip?: string;
     status?: string;
-    contact?: {
-        name?: string;
-        phone?: string;
-        email?: string;
+    geoPoint?: {
+        lat: number;
+        lon: number;
     };
 }
 

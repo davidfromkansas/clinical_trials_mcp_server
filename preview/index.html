@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clinical Trials Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --recruiting: #22c55e;
+      --not-yet: #f59e0b;
+      --active: #3b82f6;
+      --completed: #94a3b8;
+      --other: #a855f7;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    header {
+      padding: 12px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+    header .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .main { display: flex; flex: 1; min-height: 0; }
+    #sidebar {
+      width: 320px;
+      flex-shrink: 0;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+    }
+    .study {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .study:hover { background: var(--panel-2); }
+    .study.active { background: var(--panel-2); border-left: 3px solid var(--accent); padding-left: 11px; }
+    .study .title { font-size: 13px; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
+    .study .meta { font-size: 11px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 10px; }
+    .study .meta b { color: var(--text); font-weight: 500; }
+    .badge {
+      font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px;
+      color: #0b1220; white-space: nowrap;
+    }
+    #map { flex: 1; min-height: 0; background: #1a2436; }
+    .leaflet-popup-content-wrapper { background: var(--panel-2); color: var(--text); border-radius: 10px; }
+    .leaflet-popup-tip { background: var(--panel-2); }
+    .popup .ptitle { font-size: 13px; font-weight: 600; margin-bottom: 6px; line-height: 1.35; }
+    .popup .prow { font-size: 12px; color: var(--muted); margin: 2px 0; }
+    .popup .prow b { color: var(--text); font-weight: 500; }
+    .popup .actions { margin-top: 8px; display: flex; gap: 8px; }
+    .btn {
+      font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--accent); color: #08111f;
+      cursor: pointer; text-decoration: none; display: inline-block;
+    }
+    .btn.secondary { background: transparent; color: var(--accent); }
+    #empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px; }
+    .count-pill { background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 11px; color: var(--muted); }
+  </style>
+<script src="./sample-data.js"></script>
+</head>
+<body>
+  <header>
+    <div>
+      <h1 id="hTitle">Clinical Trials Map</h1>
+      <div class="sub" id="hSub">Loading…</div>
+    </div>
+    <div class="legend">
+      <span><i class="dot" style="background:var(--recruiting)"></i>Recruiting</span>
+      <span><i class="dot" style="background:var(--not-yet)"></i>Not yet recruiting</span>
+      <span><i class="dot" style="background:var(--active)"></i>Active</span>
+      <span><i class="dot" style="background:var(--completed)"></i>Completed</span>
+      <span><i class="dot" style="background:var(--other)"></i>Other</span>
+    </div>
+  </header>
+  <div class="main">
+    <div id="sidebar"><div id="empty">Waiting for trial data…</div></div>
+    <div id="map"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script>
+    // ---- Status color mapping -------------------------------------------------
+    function statusColor(status) {
+      switch ((status || "").toUpperCase()) {
+        case "RECRUITING": return getCss("--recruiting");
+        case "NOT_YET_RECRUITING": return getCss("--not-yet");
+        case "ACTIVE_NOT_RECRUITING": return getCss("--active");
+        case "COMPLETED": return getCss("--completed");
+        default: return getCss("--other");
+      }
+    }
+    function getCss(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+    function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+
+    // ---- Map setup ------------------------------------------------------------
+    var map = L.map("map", { worldCopyJump: true, minZoom: 2 }).setView([20, 0], 2);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: "&copy; OpenStreetMap &copy; CARTO",
+      subdomains: "abcd",
+      maxZoom: 19,
+    }).addTo(map);
+
+    var cluster = L.markerClusterGroup({ maxClusterRadius: 45, spiderfyOnMaxZoom: true });
+    map.addLayer(cluster);
+
+    var studyMarkers = {}; // nctId -> [markers]
+    var onDetails = null;  // set by bridge mode
+
+    function markerFor(study, loc) {
+      var color = statusColor(loc.status || study.status);
+      var m = L.circleMarker([loc.lat, loc.lon], {
+        radius: 6, color: "#0b1220", weight: 1, fillColor: color, fillOpacity: 0.9,
+      });
+      var ctgLink = "https://clinicaltrials.gov/study/" + encodeURIComponent(study.nctId);
+      var html =
+        '<div class="popup">' +
+        '<div class="ptitle">' + esc(study.title) + "</div>" +
+        '<div class="prow"><b>' + esc(study.nctId) + "</b> &middot; " +
+        '<span class="badge" style="background:' + statusColor(study.status) + '">' + esc(study.status || "") + "</span></div>" +
+        (study.phase ? '<div class="prow">Phase: <b>' + esc(study.phase) + "</b></div>" : "") +
+        (study.sponsor ? '<div class="prow">Sponsor: <b>' + esc(study.sponsor) + "</b></div>" : "") +
+        '<div class="prow">' + esc([loc.facility, loc.city, loc.state, loc.country].filter(Boolean).join(", ")) + "</div>" +
+        '<div class="actions">' +
+        '<button class="btn" data-nct="' + esc(study.nctId) + '">View details</button>' +
+        '<a class="btn secondary" href="' + ctgLink + '" target="_blank" rel="noopener">ClinicalTrials.gov</a>' +
+        "</div></div>";
+      m.bindPopup(html);
+      m.on("popupopen", function (e) {
+        var btn = e.popup.getElement().querySelector("button[data-nct]");
+        if (btn) btn.addEventListener("click", function () { handleDetails(study.nctId); });
+        reportContext(study);
+      });
+      return m;
+    }
+
+    function handleDetails(nctId) {
+      if (typeof onDetails === "function") onDetails(nctId);
+      else window.open("https://clinicaltrials.gov/study/" + encodeURIComponent(nctId), "_blank");
+    }
+
+    // Tell the agent what the user is focused on, so follow-up chat stays in sync.
+    function reportContext(study) {
+      try {
+        var app = window.__mcpApp;
+        if (app && typeof app.updateModelContext === "function") {
+          app.updateModelContext({
+            content: [{ type: "text", text:
+              "The user is now focused on clinical trial " + study.nctId + " — \"" +
+              study.title + "\" (" + (study.status || "") + ")." }],
+            structuredContent: { focusedNctId: study.nctId, title: study.title, status: study.status },
+          });
+        }
+      } catch (e) { /* host may not support updateModelContext */ }
+    }
+
+    // ---- Render ---------------------------------------------------------------
+    function renderApp(data) {
+      if (!data || !Array.isArray(data.studies)) return;
+      cluster.clearLayers();
+      studyMarkers = {};
+      var sidebar = document.getElementById("sidebar");
+      sidebar.innerHTML = "";
+      var allLatLngs = [];
+
+      data.studies.forEach(function (study) {
+        studyMarkers[study.nctId] = [];
+        (study.locations || []).forEach(function (loc) {
+          if (typeof loc.lat !== "number" || typeof loc.lon !== "number") return;
+          var m = markerFor(study, loc);
+          cluster.addLayer(m);
+          studyMarkers[study.nctId].push(m);
+          allLatLngs.push([loc.lat, loc.lon]);
+        });
+
+        var el = document.createElement("div");
+        el.className = "study";
+        el.innerHTML =
+          '<div class="title">' + esc(study.title) + "</div>" +
+          '<div class="meta">' +
+          '<span class="badge" style="background:' + statusColor(study.status) + '">' + esc(study.status || "") + "</span>" +
+          (study.phase ? "<span><b>" + esc(study.phase) + "</b></span>" : "") +
+          "<span>" + (study.locations || []).length + " site(s)</span>" +
+          (study.sponsor ? "<span>" + esc(study.sponsor) + "</span>" : "") +
+          "</div>";
+        el.addEventListener("click", function () {
+          document.querySelectorAll(".study.active").forEach(function (n) { n.classList.remove("active"); });
+          el.classList.add("active");
+          zoomToStudy(study.nctId);
+          reportContext(study);
+        });
+        sidebar.appendChild(el);
+      });
+
+      var q = data.query || {};
+      var qStr = Object.keys(q).map(function (k) { return k + ": " + q[k]; }).join("  ·  ");
+      document.getElementById("hTitle").textContent = "Clinical Trials Map";
+      document.getElementById("hSub").innerHTML =
+        '<span class="count-pill">' + data.studies.length + " trials shown</span> " +
+        '<span class="count-pill">' + allLatLngs.length + " sites</span> " +
+        (data.totalCount ? '<span class="count-pill">' + data.totalCount + " total matches</span> " : "") +
+        (qStr ? " &nbsp; " + esc(qStr) : "");
+
+      if (allLatLngs.length) map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 6 });
+      if (!data.studies.length) sidebar.innerHTML = '<div id="empty">No trials with mappable locations.</div>';
+    }
+
+    function zoomToStudy(nctId) {
+      var ms = studyMarkers[nctId] || [];
+      if (!ms.length) return;
+      var pts = ms.map(function (m) { return m.getLatLng(); });
+      if (pts.length === 1) { map.setView(pts[0], 8); ms[0].openPopup(); }
+      else map.fitBounds(pts, { padding: [50, 50], maxZoom: 8 });
+    }
+
+    // ---- Data sources: baked (preview) + MCP Apps bridge ----------------------
+    if (window.__MCP_DATA__) renderApp(window.__MCP_DATA__);
+    window.__renderApp = renderApp; // exposed for the bridge loader
+  </script>
+  <!-- Bridge loader injected by the server build; no-op in standalone preview -->
+  <script type="module">
+    try {
+      const mod = await import("https://esm.sh/@modelcontextprotocol/ext-apps@1.7.4");
+      const app = new mod.App();
+      window.__renderApp && (window.__mcpApp = app);
+      app.ontoolresult = (params) => {
+        const sc = params && params.structuredContent;
+        if (sc) window.__renderApp(sc);
+      };
+      onDetails = async (nctId) => {
+        try {
+          const res = await app.callServerTool({ name: "clinicaltrials_get_study", arguments: { nctId } });
+          const detail = res && res.structuredContent;
+          if (detail) alert(detail.title + "\n\n" + (detail.eligibilityCriteria || "").slice(0, 600));
+        } catch (e) { window.open("https://clinicaltrials.gov/study/" + encodeURIComponent(nctId), "_blank"); }
+      };
+      await app.connect();
+    } catch (e) {
+      // Standalone / non-MCP host: baked data (if any) already rendered.
+    }
+  </script>
+</body>
+</html>
