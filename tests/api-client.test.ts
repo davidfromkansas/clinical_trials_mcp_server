@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ClinicalTrialsAPIClient } from '../src/api-client.js';
+import { ClinicalTrialsAPIClient, ClinicalTrialsApiError } from '../src/api-client.js';
+
+function mockJson(data: unknown) {
+  (global.fetch as any).mockResolvedValue({
+    ok: true,
+    json: async () => data,
+  });
+}
 
 describe('ClinicalTrialsAPIClient', () => {
   let client: ClinicalTrialsAPIClient;
@@ -11,96 +18,103 @@ describe('ClinicalTrialsAPIClient', () => {
 
   describe('searchStudies', () => {
     it('should validate pageSize is within bounds', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ studies: [], totalCount: 0 }),
-      });
+      mockJson({ studies: [], totalCount: 0 });
 
-      await expect(client.searchStudies({ pageSize: 0 })).rejects.toThrow('pageSize must be between 1 and 1000');
-      await expect(client.searchStudies({ pageSize: 1001 })).rejects.toThrow('pageSize must be between 1 and 1000');
+      await expect(client.searchStudies({ pageSize: 0 })).rejects.toThrow(
+        'pageSize must be between 1 and 1000'
+      );
+      await expect(client.searchStudies({ pageSize: 1001 })).rejects.toThrow(
+        'pageSize must be between 1 and 1000'
+      );
     });
 
     it('should accept valid pageSize values', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ studies: [], totalCount: 0 }),
-      });
+      mockJson({ studies: [], totalCount: 0 });
 
       await expect(client.searchStudies({ pageSize: 50 })).resolves.toBeDefined();
       await expect(client.searchStudies({ pageSize: 1 })).resolves.toBeDefined();
       await expect(client.searchStudies({ pageSize: 1000 })).resolves.toBeDefined();
     });
 
-    it('should construct correct query parameters', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({ studies: [], totalCount: 0 }),
-      });
+    it('should map normalized params to ClinicalTrials.gov v2 query params', async () => {
+      mockJson({ studies: [], totalCount: 0 });
 
       await client.searchStudies({
-        queryTerm: 'diabetes',
-        'filter.overallStatus': 'RECRUITING',
-        'filter.phase': 'PHASE2',
+        query: 'diabetes',
+        condition: 'Type 2 Diabetes',
+        intervention: 'metformin',
+        leadSponsor: 'Pfizer',
+        status: 'RECRUITING',
+        phase: 'PHASE2',
+        studyType: 'INTERVENTIONAL',
         pageSize: 10,
       });
 
       expect(global.fetch).toHaveBeenCalled();
-      const url = (global.fetch as any).mock.calls[0][0];
-      expect(url).toContain('queryTerm=diabetes');
+      // URLSearchParams encodes spaces as '+'; normalize before asserting.
+      const url = decodeURIComponent((global.fetch as any).mock.calls[0][0]).replace(/\+/g, ' ');
+      expect(url).toContain('query.term=diabetes');
+      expect(url).toContain('query.cond=Type 2 Diabetes');
+      expect(url).toContain('query.intr=metformin');
+      expect(url).toContain('query.spons=Pfizer');
       expect(url).toContain('filter.overallStatus=RECRUITING');
-      expect(url).toContain('filter.phase=PHASE2');
+      expect(url).toContain('aggFilters=phase:2,studyType:int');
       expect(url).toContain('pageSize=10');
+      expect(url).toContain('countTotal=true');
     });
   });
 
   describe('getStudy', () => {
-    it('should validate NCT ID format', async () => {
+    it('should reject invalid NCT ID formats', async () => {
       await expect(client.getStudy('')).rejects.toThrow('Invalid NCT ID format');
       await expect(client.getStudy('INVALID')).rejects.toThrow('Invalid NCT ID format');
       await expect(client.getStudy('NCT')).rejects.toThrow('Invalid NCT ID format');
       await expect(client.getStudy('NCTABC')).rejects.toThrow('Invalid NCT ID format');
     });
 
-    it('should accept valid NCT ID format', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          protocolSection: {
-            identificationModule: { nctId: 'NCT04000009', briefTitle: 'Test Study' },
-          },
-        }),
+    it('should accept a valid NCT ID and hit the right endpoint', async () => {
+      mockJson({
+        protocolSection: {
+          identificationModule: { nctId: 'NCT04000009', briefTitle: 'Test Study' },
+        },
       });
 
       await expect(client.getStudy('NCT04000009')).resolves.toBeDefined();
+      const url = (global.fetch as any).mock.calls[0][0];
+      expect(url).toContain('/studies/NCT04000009');
     });
 
-    it('should construct correct endpoint URL', async () => {
-      (global.fetch as any).mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          protocolSection: {
-            identificationModule: { nctId: 'NCT04000009', briefTitle: 'Test Study' },
-          },
-        }),
-      });
+    it('should uppercase lowercase NCT IDs', async () => {
+      mockJson({ protocolSection: { identificationModule: { nctId: 'NCT04000009' } } });
 
-      await client.getStudy('NCT04000009');
-
-      expect(global.fetch).toHaveBeenCalled();
+      await client.getStudy('nct04000009');
       const url = (global.fetch as any).mock.calls[0][0];
       expect(url).toContain('/studies/NCT04000009');
     });
   });
 
   describe('error handling', () => {
-    it('should throw error on API failure', async () => {
+    it('should throw an actionable error on API failure', async () => {
       (global.fetch as any).mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
       });
 
-      await expect(client.searchStudies()).rejects.toThrow('API request failed: 500 Internal Server Error');
+      await expect(client.searchStudies()).rejects.toThrow(ClinicalTrialsApiError);
+      await expect(client.searchStudies()).rejects.toThrow(
+        'ClinicalTrials.gov request failed: 500 Internal Server Error'
+      );
+    });
+
+    it('should give a specific 400 message', async () => {
+      (global.fetch as any).mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+      });
+
+      await expect(client.searchStudies()).rejects.toThrow('ClinicalTrials.gov rejected the request (400)');
     });
   });
 });

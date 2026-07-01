@@ -30,6 +30,7 @@ async function handleMcpRequest(req: Request, res: Response) {
   const server = createMcpServer();
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
+    enableJsonResponse: true,
   });
 
   res.on('close', () => {

@@ -1,26 +1,38 @@
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { ClinicalTrialsAPIClient } from '../api-client.js';
+import { jsonResult, errorResult } from '../lib/format.js';
 
-export const getAPIVersionTool: Tool = {
-  name: 'get_api_version_info',
-  description: 'Retrieve the current version information for the ClinicalTrials.gov API. Use this tool to check API version for compatibility or debugging purposes. Returns version number and API metadata.',
-  inputSchema: {
-    type: 'object',
-    properties: {},
-  },
+const outputSchema = {
+  apiVersion: z.string().optional(),
+  dataTimestamp: z.string().optional(),
 };
 
-export async function handleGetAPIVersion(
-  client: ClinicalTrialsAPIClient
-): Promise<{ content: Array<{ type: string; text: string }> }> {
-  const version = await client.getAPIVersion();
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(version, null, 2),
+export function registerGetApiVersion(server: McpServer, client: ClinicalTrialsAPIClient): void {
+  server.registerTool(
+    'clinicaltrials_get_api_version',
+    {
+      title: 'Get API Version',
+      description:
+        'Retrieve the ClinicalTrials.gov API version and data timestamp. Use for compatibility checks or debugging.',
+      outputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
       },
-    ],
-  };
+    },
+    async () => {
+      try {
+        const version = (await client.getAPIVersion()) as unknown as Record<string, unknown>;
+        return jsonResult({
+          apiVersion: (version.apiVersion as string) ?? undefined,
+          dataTimestamp: (version.dataTimestamp as string) ?? undefined,
+        });
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    }
+  );
 }

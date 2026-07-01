@@ -1,33 +1,47 @@
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { ClinicalTrialsAPIClient } from '../api-client.js';
+import { jsonResult, errorResult } from '../lib/format.js';
 
-export const getSearchAreasTool: Tool = {
-  name: 'get_available_search_filters',
-  description: 'Retrieve all available search areas and filter options for querying clinical trials. Use this tool to discover what filters can be applied when searching for trials, including field names, display names, types, and possible enum values. Essential for understanding the search capabilities before constructing complex queries.',
-  inputSchema: {
-    type: 'object',
-    properties: {},
-  },
+const outputSchema = {
+  areas: z.array(
+    z.object({
+      name: z.string().optional(),
+      displayName: z.string().optional(),
+      type: z.string().optional(),
+      enumValues: z.array(z.any()).optional(),
+    })
+  ),
 };
 
-export async function handleGetSearchAreas(
-  client: ClinicalTrialsAPIClient
-): Promise<{ content: Array<{ type: string; text: string }> }> {
-  const searchAreas = await client.getSearchAreas();
-  
-  const areas = (searchAreas.areas || []).map((area: any) => ({
-    name: area.name,
-    displayName: area.displayName,
-    type: area.type,
-    enumValues: area.enumValues,
-  }));
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify({ areas }, null, 2),
+export function registerListSearchAreas(server: McpServer, client: ClinicalTrialsAPIClient): void {
+  server.registerTool(
+    'clinicaltrials_list_search_areas',
+    {
+      title: 'List Search Areas & Filters',
+      description:
+        'List the search areas and filter options available when querying ClinicalTrials.gov (field names, display names, types, enum values). Use to discover valid filters before constructing complex searches.',
+      outputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
       },
-    ],
-  };
+    },
+    async () => {
+      try {
+        const searchAreas = await client.getSearchAreas();
+        const areas = (searchAreas.areas || []).map((area: any) => ({
+          name: area?.name,
+          displayName: area?.displayName,
+          type: area?.type,
+          enumValues: area?.enumValues,
+        }));
+        return jsonResult({ areas });
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    }
+  );
 }

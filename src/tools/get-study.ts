@@ -1,61 +1,97 @@
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { ClinicalTrialsAPIClient } from '../api-client.js';
+import { jsonResult, errorResult } from '../lib/format.js';
 
-export const getStudyTool: Tool = {
-  name: 'retrieve_detailed_study_by_nct_id',
-  description: 'Retrieve comprehensive details about a specific clinical trial using its NCT (ClinicalTrials.gov) identifier. Use this tool when users have a specific trial ID and want complete information including eligibility criteria, locations, sponsors, interventions, and study design. Returns full study record with all available details.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      nctId: {
-        type: 'string',
-        description: 'ClinicalTrials.gov identifier in format NCT followed by numbers (e.g., NCT04000009). This is the unique identifier for each clinical trial',
-        pattern: '^NCT[0-9]+$',
-      },
-    },
-    required: ['nctId'],
-  },
+const inputSchema = z
+  .object({
+    nctId: z
+      .string()
+      .regex(/^NCT[0-9]+$/i, 'Must be "NCT" followed by numbers, e.g. NCT04000009.')
+      .describe('ClinicalTrials.gov identifier (e.g. NCT04000009).'),
+  })
+  .strict();
+
+const outputSchema = {
+  nctId: z.string(),
+  title: z.string().optional(),
+  officialTitle: z.string().optional(),
+  status: z.string().optional(),
+  startDate: z.string().optional(),
+  completionDate: z.string().optional(),
+  conditions: z.array(z.string()),
+  sponsor: z.string().optional(),
+  eligibilityCriteria: z.string().optional(),
+  healthyVolunteers: z.boolean().optional(),
+  gender: z.string().optional(),
+  minimumAge: z.string().optional(),
+  maximumAge: z.string().optional(),
+  interventions: z.array(z.object({ type: z.string().optional(), name: z.string().optional() })),
+  locations: z.array(
+    z.object({
+      facility: z.string(),
+      city: z.string(),
+      state: z.string(),
+      country: z.string(),
+      status: z.string(),
+    })
+  ),
 };
 
-export async function handleGetStudy(
-  client: ClinicalTrialsAPIClient,
-  args: any
-): Promise<{ content: Array<{ type: string; text: string }> }> {
-  const study = await client.getStudy(args.nctId);
-  
-  const summary = {
-    nctId: study.protocolSection.identificationModule.nctId,
-    title: study.protocolSection.identificationModule.briefTitle,
-    officialTitle: study.protocolSection.identificationModule.officialTitle,
-    status: study.protocolSection.statusModule.overallStatus,
-    startDate: study.protocolSection.statusModule.startDateStruct?.date,
-    completionDate: study.protocolSection.statusModule.completionDateStruct?.date,
-    conditions: study.protocolSection.conditionsModule?.conditions?.map((c: any) => c.name) || [],
-    sponsor: study.protocolSection.sponsorCollaboratorsModule?.leadSponsor?.name,
-    eligibilityCriteria: study.protocolSection.eligibilityModule?.eligibilityCriteria,
-    healthyVolunteers: study.protocolSection.eligibilityModule?.healthyVolunteers,
-    gender: study.protocolSection.eligibilityModule?.gender,
-    minimumAge: study.protocolSection.eligibilityModule?.minimumAge,
-    maximumAge: study.protocolSection.eligibilityModule?.maximumAge,
-    interventions: study.protocolSection.armsInterventionsModule?.interventions?.map((i: any) => ({
-      type: i.interventionType,
-      name: i.name,
-    })) || [],
-    locations: (study.protocolSection.contactsLocationsModule?.locations || []).map((l: any) => ({
-      facility: l.facility || 'Unknown',
-      city: l.city || 'Unknown',
-      state: l.state || 'Unknown',
-      country: l.country || 'Unknown',
-      status: l.status || 'Unknown',
-    })),
-  };
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(summary, null, 2),
+export function registerGetStudy(server: McpServer, client: ClinicalTrialsAPIClient): void {
+  server.registerTool(
+    'clinicaltrials_get_study',
+    {
+      title: 'Get Clinical Trial Details',
+      description:
+        'Retrieve full details for a single clinical trial by its NCT ID: title, status, dates, conditions, sponsor, eligibility criteria, interventions, and study locations. Use after clinicaltrials_search_studies when you have a specific NCT ID.',
+      inputSchema,
+      outputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
       },
-    ],
-  };
+    },
+    async ({ nctId }) => {
+      try {
+        const study = await client.getStudy(nctId);
+        const p = study.protocolSection;
+
+        const summary = {
+          nctId: p?.identificationModule?.nctId || nctId,
+          title: p?.identificationModule?.briefTitle,
+          officialTitle: p?.identificationModule?.officialTitle,
+          status: p?.statusModule?.overallStatus,
+          startDate: p?.statusModule?.startDateStruct?.date,
+          completionDate: p?.statusModule?.completionDateStruct?.date,
+          conditions: (p?.conditionsModule?.conditions || [])
+            .map((c: any) => (typeof c === 'string' ? c : c?.name))
+            .filter(Boolean),
+          sponsor: p?.sponsorCollaboratorsModule?.leadSponsor?.name,
+          eligibilityCriteria: p?.eligibilityModule?.eligibilityCriteria,
+          healthyVolunteers: p?.eligibilityModule?.healthyVolunteers,
+          gender: p?.eligibilityModule?.gender,
+          minimumAge: p?.eligibilityModule?.minimumAge,
+          maximumAge: p?.eligibilityModule?.maximumAge,
+          interventions: (p?.armsInterventionsModule?.interventions || []).map((i: any) => ({
+            type: i?.interventionType,
+            name: i?.name,
+          })),
+          locations: (p?.contactsLocationsModule?.locations || []).map((l: any) => ({
+            facility: l?.facility || 'Unknown',
+            city: l?.city || 'Unknown',
+            state: l?.state || 'Unknown',
+            country: l?.country || 'Unknown',
+            status: l?.status || 'Unknown',
+          })),
+        };
+
+        return jsonResult(summary);
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    }
+  );
 }

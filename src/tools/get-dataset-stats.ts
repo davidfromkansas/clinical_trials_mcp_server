@@ -1,32 +1,52 @@
-import { Tool } from '@modelcontextprotocol/sdk/types.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import { ClinicalTrialsAPIClient } from '../api-client.js';
+import { jsonResult, errorResult } from '../lib/format.js';
 
-export const getDatasetStatsTool: Tool = {
-  name: 'get_database_statistics',
-  description: 'Retrieve statistics about the ClinicalTrials.gov database, including total number of studies. Use this tool to understand the scale of available data or to get counts for specific search terms. Helpful for providing context about the database size or validating search result expectations.',
-  inputSchema: {
-    type: 'object',
-    properties: {
-      queryTerm: {
-        type: 'string',
-        description: 'Optional search term to filter statistics. When provided, returns count of studies matching the query term',
-      },
-    },
-  },
+const inputSchema = z
+  .object({
+    query: z
+      .string()
+      .optional()
+      .describe('Optional search term. When provided, returns the count of studies matching it.'),
+  })
+  .strict();
+
+const outputSchema = {
+  totalCount: z.number().optional(),
+  averageSizeBytes: z.number().optional(),
+  largestStudies: z.array(z.any()).optional(),
+  raw: z.any().optional(),
 };
 
-export async function handleGetDatasetStats(
-  client: ClinicalTrialsAPIClient,
-  args: any
-): Promise<{ content: Array<{ type: string; text: string }> }> {
-  const stats = await client.getDatasetStats(args.queryTerm);
-
-  return {
-    content: [
-      {
-        type: 'text',
-        text: JSON.stringify(stats, null, 2),
+export function registerGetStats(server: McpServer, client: ClinicalTrialsAPIClient): void {
+  server.registerTool(
+    'clinicaltrials_get_stats',
+    {
+      title: 'Get Database Statistics',
+      description:
+        'Retrieve ClinicalTrials.gov dataset statistics (e.g. total number of studies). Optionally scope to a search term to get a match count. Useful for gauging dataset scale or validating expected result counts.',
+      inputSchema,
+      outputSchema,
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
       },
-    ],
-  };
+    },
+    async ({ query }) => {
+      try {
+        const stats = (await client.getDatasetStats(query)) as unknown as Record<string, unknown>;
+        return jsonResult({
+          totalCount: (stats.totalCount as number) ?? undefined,
+          averageSizeBytes: (stats.averageSizeBytes as number) ?? undefined,
+          largestStudies: (stats.largestStudies as unknown[]) ?? undefined,
+          raw: stats,
+        });
+      } catch (error) {
+        return errorResult(error instanceof Error ? error.message : String(error));
+      }
+    }
+  );
 }
