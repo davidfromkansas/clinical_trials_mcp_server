@@ -7,18 +7,18 @@
   <!--__LEAFLET_CSS__-->
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --panel-2: #1e293b;
-      --border: #334155;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --accent: #38bdf8;
-      --recruiting: #22c55e;
-      --not-yet: #f59e0b;
-      --active: #3b82f6;
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-2: #f1f5f9;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --recruiting: #16a34a;
+      --not-yet: #ea580c;
+      --active: #2563eb;
       --completed: #94a3b8;
-      --other: #a855f7;
+      --other: #9333ea;
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; }
@@ -34,78 +34,235 @@
       height: 560px;
       overflow: hidden;
     }
-    header {
-      padding: 12px 16px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      flex-shrink: 0;
-    }
-    header h1 { font-size: 15px; margin: 0; font-weight: 600; }
-    header .sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
-    .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--muted); }
-    .legend span { display: inline-flex; align-items: center; gap: 5px; }
     .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-    .main { display: flex; flex: 1; min-height: 0; }
+    /* Map fills the whole widget; the panel floats over it (Apple Maps style). */
+    .main { display: flex; flex: 1; min-height: 0; position: relative; }
+    #map { position: absolute; inset: 0; background: #e8edf2; }
+
+    /* ---- Floating list panel ------------------------------------------------ */
     #sidebar {
-      width: 320px;
-      flex-shrink: 0;
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      bottom: 14px;
+      width: 340px;
+      display: flex;
+      flex-direction: column;
       background: var(--panel);
-      border-right: 1px solid var(--border);
-      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      z-index: 500;
+      transition: transform 0.24s ease, opacity 0.18s ease;
+      box-shadow: 0 8px 30px rgba(15,23,42,0.16);
     }
+    body.sidebar-collapsed #sidebar {
+      transform: translateX(calc(-100% - 20px));
+      opacity: 0;
+      pointer-events: none;
+    }
+    /* Panel header holds the search context + filter chips (pinned). */
+    .panel-header {
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .panel-title-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .panel-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; margin: 0; }
+    .panel-sub { font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .panel-counts { font-size: 12px; color: var(--muted); margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+    .count-pill { background: var(--panel-2); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--muted); font-weight: 500; }
+    /* Clickable status filter chips. */
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600; color: var(--text);
+      background: var(--panel-2); border: 1px solid transparent;
+      border-radius: 999px; padding: 6px 11px; cursor: pointer;
+      transition: background 0.12s, border-color 0.12s, opacity 0.12s;
+      user-select: none;
+    }
+    .chip .dot { width: 8px; height: 8px; }
+    .chip[aria-pressed="false"] { opacity: 0.45; }
+    .chip[aria-pressed="true"] { border-color: var(--border); }
+    .chip:hover { background: var(--border); }
+    #studyList { flex: 1; overflow-y: auto; }
+
     .study {
-      padding: 12px 14px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--border);
       cursor: pointer;
       transition: background 0.12s;
     }
     .study:hover { background: var(--panel-2); }
-    .study.active { background: var(--panel-2); border-left: 3px solid var(--accent); padding-left: 11px; }
-    .study .title { font-size: 13px; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
-    .study .meta { font-size: 11px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 10px; }
+    .study.active { background: var(--panel-2); box-shadow: inset 3px 0 0 var(--accent); }
+    .study .title { font-size: 14px; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
+    .study .meta { font-size: 11px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
     .study .meta b { color: var(--text); font-weight: 500; }
     .badge {
-      font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 999px;
-      color: #0b1220; white-space: nowrap;
+      font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+      color: #ffffff; white-space: nowrap; letter-spacing: 0.02em;
     }
-    #map { flex: 1; min-height: 0; background: #1a2436; }
-    .leaflet-popup-content-wrapper { background: var(--panel-2); color: var(--text); border-radius: 10px; }
-    .leaflet-popup-tip { background: var(--panel-2); }
+
+    /* ---- Details tray (Apple Maps place-card style) ------------------------- */
+    #detailsTray {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      bottom: 14px;
+      width: 340px;
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      z-index: 600;
+      transform: translateX(calc(-100% - 20px));
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.24s ease, opacity 0.18s ease;
+      box-shadow: 0 8px 30px rgba(15,23,42,0.16);
+    }
+    body.details-open #detailsTray {
+      transform: translateX(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .details-topbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 14px 0;
+      flex-shrink: 0;
+    }
+    .icon-btn {
+      width: 30px; height: 30px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--panel-2); color: var(--text);
+      border: none; border-radius: 999px; cursor: pointer;
+      transition: background 0.12s;
+    }
+    .icon-btn:hover { background: var(--border); }
+    .icon-btn svg { width: 17px; height: 17px; display: block; }
+    .details-scroll { flex: 1; overflow-y: auto; padding: 12px 18px 18px; }
+    .details-name { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin: 6px 0 4px; }
+    .details-subtitle { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.4; }
+    .details-subtitle .link { color: var(--accent); font-weight: 500; }
+    /* Action button row (Directions / Call / Website style). */
+    .action-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .action-btn {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+      background: var(--panel-2); border: none; border-radius: 12px;
+      padding: 10px 6px; cursor: pointer; text-decoration: none;
+      color: var(--accent); font-size: 11px; font-weight: 600;
+      transition: background 0.12s;
+    }
+    .action-btn:hover { background: var(--border); }
+    .action-btn.primary { background: var(--accent); color: #fff; }
+    .action-btn.primary:hover { filter: brightness(1.08); }
+    .action-btn svg { width: 18px; height: 18px; }
+    /* Stat strip (Status / Phase / Sites). */
+    .stat-strip {
+      display: flex; border: 1px solid var(--border); border-radius: 12px;
+      overflow: hidden; margin-bottom: 18px;
+    }
+    .stat-cell { flex: 1; padding: 10px 12px; border-right: 1px solid var(--border); }
+    .stat-cell:last-child { border-right: none; }
+    .stat-label { font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-value { font-size: 13px; font-weight: 600; margin-top: 3px; }
+    .details-section { margin-bottom: 18px; }
+    .details-section h3 { font-size: 12px; font-weight: 700; color: var(--muted); margin: 0 0 8px 0; text-transform: uppercase; letter-spacing: 0.05em; }
+    .details-section p { font-size: 13px; line-height: 1.55; margin: 0; color: var(--text); }
+    .details-location { padding: 9px 0; border-bottom: 1px solid var(--border); }
+    .details-location:last-child { border-bottom: none; }
+    .details-location .name { font-size: 13px; font-weight: 600; }
+    .details-location .addr { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* Floating toggle to reopen the panel when collapsed. */
+    #toggleSidebar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      z-index: 1200;
+      width: 38px;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(15,23,42,0.18);
+      transition: background 0.12s;
+    }
+    #toggleSidebar:hover { background: var(--panel-2); }
+    #toggleSidebar svg { width: 20px; height: 20px; display: block; }
+    /* Hide the floating toggle whenever a panel is already showing. */
+    body:not(.sidebar-collapsed) #toggleSidebar,
+    body.details-open #toggleSidebar { display: none; }
+
+    .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border-radius: 10px; }
+    .leaflet-popup-tip { background: var(--panel); }
     .popup .ptitle { font-size: 13px; font-weight: 600; margin-bottom: 6px; line-height: 1.35; }
     .popup .prow { font-size: 12px; color: var(--muted); margin: 2px 0; }
     .popup .prow b { color: var(--text); font-weight: 500; }
     .popup .actions { margin-top: 8px; display: flex; gap: 8px; }
     .btn {
       font-size: 12px; font-weight: 600; padding: 6px 10px; border-radius: 7px;
-      border: 1px solid var(--border); background: var(--accent); color: #08111f;
+      border: 1px solid var(--accent); background: var(--accent); color: #ffffff;
       cursor: pointer; text-decoration: none; display: inline-block;
     }
     .btn.secondary { background: transparent; color: var(--accent); }
     #empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 13px; }
-    .count-pill { background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 11px; color: var(--muted); }
   </style>
 </head>
 <body>
-  <header>
-    <div>
-      <h1 id="hTitle">Clinical Trials Map</h1>
-      <div class="sub" id="hSub">Loading…</div>
-    </div>
-    <div class="legend">
-      <span><i class="dot" style="background:var(--recruiting)"></i>Recruiting</span>
-      <span><i class="dot" style="background:var(--not-yet)"></i>Not yet recruiting</span>
-      <span><i class="dot" style="background:var(--active)"></i>Active</span>
-      <span><i class="dot" style="background:var(--completed)"></i>Completed</span>
-      <span><i class="dot" style="background:var(--other)"></i>Other</span>
-    </div>
-  </header>
   <div class="main">
-    <div id="sidebar"><div id="empty">Waiting for trial data…</div></div>
     <div id="map"></div>
+
+    <!-- Floating list panel (Apple Maps style) -->
+    <div id="sidebar">
+      <div class="panel-header">
+        <div class="panel-title-row">
+          <h1 class="panel-title" id="hTitle">Clinical Trials</h1>
+          <button id="collapseBtn" class="icon-btn" type="button" aria-label="Hide panel" title="Hide panel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+        <div class="panel-sub" id="hSub">Loading…</div>
+        <div class="panel-counts" id="hCounts"></div>
+        <div class="chips" id="filterChips"></div>
+      </div>
+      <div id="studyList"><div id="empty">Waiting for trial data…</div></div>
+    </div>
+
+    <!-- Details tray -->
+    <div id="detailsTray">
+      <div class="details-topbar">
+        <button id="backBtn" class="icon-btn" type="button" aria-label="Back to list" title="Back to list">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+      </div>
+      <div class="details-scroll" id="detailsContent">
+        <div style="padding: 20px; text-align: center; color: var(--muted); font-size: 13px;">
+          Select a trial to view details
+        </div>
+      </div>
+    </div>
+
+    <button id="toggleSidebar" type="button" aria-label="Show trial list" title="Show trial list" aria-expanded="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
   </div>
 
   <!--__LEAFLET_JS__-->
@@ -125,8 +282,9 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
 
     // ---- Map setup ------------------------------------------------------------
-    var map = L.map("map", { worldCopyJump: true, minZoom: 2 }).setView([20, 0], 2);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    var map = L.map("map", { worldCopyJump: true, minZoom: 2, zoomControl: false }).setView([20, 0], 2);
+    L.control.zoom({ position: "topright" }).addTo(map);
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       attribution: "&copy; OpenStreetMap &copy; CARTO",
       subdomains: "abcd",
       maxZoom: 19,
@@ -148,6 +306,104 @@
       refitTimer = setTimeout(refitMap, 120);
     });
 
+    // ---- Panel collapse / expand ----------------------------------------------
+    (function () {
+      var collapseBtn = document.getElementById("collapseBtn");
+      var openBtn = document.getElementById("toggleSidebar");
+      if (collapseBtn) collapseBtn.addEventListener("click", function () {
+        document.body.classList.add("sidebar-collapsed");
+      });
+      if (openBtn) openBtn.addEventListener("click", function () {
+        document.body.classList.remove("sidebar-collapsed");
+      });
+    })();
+
+    // ---- Status labels + filter state -----------------------------------------
+    function statusLabel(status) {
+      var map = {
+        RECRUITING: "Recruiting",
+        NOT_YET_RECRUITING: "Not yet recruiting",
+        ACTIVE_NOT_RECRUITING: "Active",
+        COMPLETED: "Completed",
+        ENROLLING_BY_INVITATION: "Enrolling by invitation",
+        SUSPENDED: "Suspended",
+        TERMINATED: "Terminated",
+        WITHDRAWN: "Withdrawn",
+      };
+      return map[(status || "").toUpperCase()] || (status || "Other");
+    }
+    var allStudies = [];       // full dataset from the last render
+    var activeStatuses = null; // Set of enabled statuses, or null = all
+
+    // ---- Details tray (Apple Maps place-card style) ---------------------------
+    var currentStudy = null;
+    function openDetails(study) {
+      currentStudy = study;
+      document.body.classList.add("details-open");
+      var content = document.getElementById("detailsContent");
+      var locs = study.locations || [];
+      var primary = locs[0] || {};
+      var primaryPlace = [primary.city, primary.state, primary.country].filter(Boolean).join(", ");
+      var subtitle = primaryPlace
+        ? '<span class="link">' + esc(primaryPlace) + "</span>" + (locs.length > 1 ? " and " + (locs.length - 1) + " more" : "")
+        : esc(study.nctId);
+      var ctgLink = "https://clinicaltrials.gov/study/" + encodeURIComponent(study.nctId);
+
+      var html =
+        '<div class="details-name">' + esc(study.title) + "</div>" +
+        '<div class="details-subtitle">' + subtitle + "</div>" +
+        // Action row
+        '<div class="action-row">' +
+        '<button class="action-btn primary" data-act="map">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"></polygon></svg>' +
+        "View on map</button>" +
+        '<a class="action-btn" href="' + ctgLink + '" target="_blank" rel="noopener">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>' +
+        "Website</a>" +
+        '<button class="action-btn" data-act="full">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>' +
+        "More</button>" +
+        "</div>" +
+        // Stat strip
+        '<div class="stat-strip">' +
+        '<div class="stat-cell"><div class="stat-label">Status</div><div class="stat-value" style="color:' + statusColor(study.status) + '">' + esc(statusLabel(study.status)) + "</div></div>" +
+        '<div class="stat-cell"><div class="stat-label">Phase</div><div class="stat-value">' + esc(study.phase || "N/A") + "</div></div>" +
+        '<div class="stat-cell"><div class="stat-label">Sites</div><div class="stat-value">' + locs.length + "</div></div>" +
+        "</div>";
+
+      if (study.sponsor) {
+        html += '<div class="details-section"><h3>Sponsor</h3><p>' + esc(study.sponsor) + "</p></div>";
+      }
+      html += '<div class="details-section"><h3>Identifier</h3><p>' + esc(study.nctId) + "</p></div>";
+      if (locs.length) {
+        html += '<div class="details-section"><h3>Locations (' + locs.length + ")</h3>";
+        locs.forEach(function (loc) {
+          html += '<div class="details-location">' +
+            '<div class="name">' + esc(loc.facility || "Study site") + "</div>" +
+            (loc.city || loc.state || loc.country
+              ? '<div class="addr">' + esc([loc.city, loc.state, loc.country].filter(Boolean).join(", ")) + "</div>"
+              : "") +
+            "</div>";
+        });
+        html += "</div>";
+      }
+      content.innerHTML = html;
+      content.scrollTop = 0;
+
+      var mapBtn = content.querySelector('[data-act="map"]');
+      if (mapBtn) mapBtn.addEventListener("click", function () { zoomToStudy(study.nctId); });
+      var fullBtn = content.querySelector('[data-act="full"]');
+      if (fullBtn) fullBtn.addEventListener("click", function () { handleDetails(study.nctId); });
+    }
+    function closeDetails() {
+      document.body.classList.remove("details-open");
+      currentStudy = null;
+    }
+    (function () {
+      var backBtn = document.getElementById("backBtn");
+      if (backBtn) backBtn.addEventListener("click", closeDetails);
+    })();
+
     var studyMarkers = {}; // nctId -> [markers]
     var onDetails = null;  // set by bridge mode
 
@@ -161,7 +417,7 @@
         '<div class="popup">' +
         '<div class="ptitle">' + esc(study.title) + "</div>" +
         '<div class="prow"><b>' + esc(study.nctId) + "</b> &middot; " +
-        '<span class="badge" style="background:' + statusColor(study.status) + '">' + esc(study.status || "") + "</span></div>" +
+        '<span class="badge" style="background:' + statusColor(study.status) + '">' + esc(statusLabel(study.status)) + "</span></div>" +
         (study.phase ? '<div class="prow">Phase: <b>' + esc(study.phase) + "</b></div>" : "") +
         (study.sponsor ? '<div class="prow">Sponsor: <b>' + esc(study.sponsor) + "</b></div>" : "") +
         '<div class="prow">' + esc([loc.facility, loc.city, loc.state, loc.country].filter(Boolean).join(", ")) + "</div>" +
@@ -174,6 +430,7 @@
         var btn = e.popup.getElement().querySelector("button[data-nct]");
         if (btn) btn.addEventListener("click", function () { handleDetails(study.nctId); });
         reportContext(study);
+        openDetails(study);
       });
       return m;
     }
@@ -199,15 +456,59 @@
     }
 
     // ---- Render ---------------------------------------------------------------
-    function renderApp(data) {
-      if (!data || !Array.isArray(data.studies)) return;
+    var lastData = null;
+
+    function statusesInData(studies) {
+      var order = ["RECRUITING", "NOT_YET_RECRUITING", "ACTIVE_NOT_RECRUITING", "COMPLETED", "ENROLLING_BY_INVITATION", "SUSPENDED", "TERMINATED", "WITHDRAWN"];
+      var present = {};
+      studies.forEach(function (s) { present[(s.status || "OTHER").toUpperCase()] = true; });
+      var known = order.filter(function (s) { return present[s]; });
+      var extras = Object.keys(present).filter(function (s) { return order.indexOf(s) === -1; });
+      return known.concat(extras);
+    }
+
+    function isStudyVisible(study) {
+      if (!activeStatuses) return true;
+      return activeStatuses.has((study.status || "OTHER").toUpperCase());
+    }
+
+    // Build the clickable status filter chips.
+    function buildChips(studies) {
+      var wrap = document.getElementById("filterChips");
+      wrap.innerHTML = "";
+      var statuses = statusesInData(studies);
+      statuses.forEach(function (st) {
+        var chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "chip";
+        var on = !activeStatuses || activeStatuses.has(st);
+        chip.setAttribute("aria-pressed", String(on));
+        chip.innerHTML = '<i class="dot" style="background:' + statusColor(st) + '"></i>' + esc(statusLabel(st));
+        chip.addEventListener("click", function () {
+          if (!activeStatuses) {
+            // First toggle: start from "all on" then turn this one off.
+            activeStatuses = new Set(statuses);
+          }
+          if (activeStatuses.has(st)) activeStatuses.delete(st);
+          else activeStatuses.add(st);
+          if (activeStatuses.size === statuses.length) activeStatuses = null; // all on = no filter
+          renderFiltered();
+        });
+        wrap.appendChild(chip);
+      });
+    }
+
+    // Render list + markers for the currently-visible studies.
+    function renderFiltered() {
+      if (!lastData) return;
+      var studies = lastData.studies.filter(isStudyVisible);
       cluster.clearLayers();
       studyMarkers = {};
-      var sidebar = document.getElementById("sidebar");
-      sidebar.innerHTML = "";
+      var listEl = document.getElementById("studyList");
+      listEl.innerHTML = "";
       var allLatLngs = [];
 
-      data.studies.forEach(function (study) {
+      studies.forEach(function (study) {
         studyMarkers[study.nctId] = [];
         (study.locations || []).forEach(function (loc) {
           if (typeof loc.lat !== "number" || typeof loc.lon !== "number") return;
@@ -222,7 +523,7 @@
         el.innerHTML =
           '<div class="title">' + esc(study.title) + "</div>" +
           '<div class="meta">' +
-          '<span class="badge" style="background:' + statusColor(study.status) + '">' + esc(study.status || "") + "</span>" +
+          '<span class="badge" style="background:' + statusColor(study.status) + '">' + esc(statusLabel(study.status)) + "</span>" +
           (study.phase ? "<span><b>" + esc(study.phase) + "</b></span>" : "") +
           "<span>" + (study.locations || []).length + " site(s)</span>" +
           (study.sponsor ? "<span>" + esc(study.sponsor) + "</span>" : "") +
@@ -232,24 +533,40 @@
           el.classList.add("active");
           zoomToStudy(study.nctId);
           reportContext(study);
+          openDetails(study);
         });
-        sidebar.appendChild(el);
+        listEl.appendChild(el);
       });
 
-      var q = data.query || {};
-      var qStr = Object.keys(q).map(function (k) { return k + ": " + q[k]; }).join("  ·  ");
-      document.getElementById("hTitle").textContent = "Clinical Trials Map";
-      document.getElementById("hSub").innerHTML =
-        '<span class="count-pill">' + data.studies.length + " trials shown</span> " +
-        '<span class="count-pill">' + allLatLngs.length + " sites</span> " +
-        (data.totalCount ? '<span class="count-pill">' + data.totalCount + " total matches</span> " : "") +
-        (qStr ? " &nbsp; " + esc(qStr) : "");
+      if (!studies.length) {
+        listEl.innerHTML = '<div id="empty">No trials match the selected filters.</div>';
+      }
+
+      // Counts reflect the filtered view.
+      var totalSites = allLatLngs.length;
+      var counts = document.getElementById("hCounts");
+      counts.innerHTML =
+        '<span class="count-pill">' + studies.length + " trials</span>" +
+        '<span class="count-pill">' + totalSites + " sites</span>" +
+        (lastData.totalCount ? '<span class="count-pill">' + lastData.totalCount + " total matches</span>" : "");
 
       lastLatLngs = allLatLngs;
       if (allLatLngs.length) map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 6 });
-      if (!data.studies.length) sidebar.innerHTML = '<div id="empty">No trials with mappable locations.</div>';
-      // Re-fit shortly after render in case the host is still resizing the iframe.
       setTimeout(refitMap, 200);
+    }
+
+    function renderApp(data) {
+      if (!data || !Array.isArray(data.studies)) return;
+      lastData = data;
+      activeStatuses = null; // reset filters on new data
+
+      var q = data.query || {};
+      var qStr = Object.keys(q).map(function (k) { return k + ": " + q[k]; }).join("  ·  ");
+      document.getElementById("hTitle").textContent = "Clinical Trials";
+      document.getElementById("hSub").textContent = qStr || "Search results";
+
+      buildChips(data.studies);
+      renderFiltered();
     }
 
     function zoomToStudy(nctId) {
