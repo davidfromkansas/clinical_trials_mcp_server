@@ -24,7 +24,7 @@ Open the config file and add the ClinicalTrials server:
 {
   "mcpServers": {
     "clinicaltrials": {
-      "url": "https://clinicaltrials-mcp-server-three.vercel.app",
+      "url": "https://clinicaltrials-mcp-server-three.vercel.app/mcp",
       "transport": "http"
     }
   }
@@ -41,7 +41,7 @@ If you already have other MCP servers configured, add it to the existing `mcpSer
       "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/files"]
     },
     "clinicaltrials": {
-      "url": "https://clinicaltrials-mcp-server-three.vercel.app",
+      "url": "https://clinicaltrials-mcp-server-three.vercel.app/mcp",
       "transport": "http"
     }
   }
@@ -61,17 +61,25 @@ Once configured, you can ask Claude to:
 - "What filters can I use to search clinical trials?"
 - "Show me trials for breast cancer that are currently recruiting"
 
-### Available Endpoints
+### Using the Claude Web Custom Connector
 
-The hosted API provides the following endpoints:
-- Health check: https://clinicaltrials-mcp-server-three.vercel.app/health
-- Tools list: https://clinicaltrials-mcp-server-three.vercel.app/tools
-- Search trials: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/search_clinical_trials_by_criteria
-- Get study: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/retrieve_detailed_study_by_nct_id
-- Get fields: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_available_data_fields_metadata
-- Get filters: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_available_search_filters
-- Get stats: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/get_database_statistics
-- API version: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_api_version_info
+On claude.ai, use **Settings > Connectors > Add custom connector** and fill in:
+- **Name**: `ClinicalTrials`
+- **Remote MCP server URL**: `https://clinicaltrials-mcp-server-three.vercel.app/mcp`
+- **OAuth Client ID / Secret**: leave blank (this server does not require auth)
+
+### MCP Endpoint
+
+- MCP endpoint (Streamable HTTP): `https://clinicaltrials-mcp-server-three.vercel.app/mcp`
+- Health check: `https://clinicaltrials-mcp-server-three.vercel.app/health`
+
+The server exposes these MCP tools:
+- `search_clinical_trials_by_criteria`
+- `retrieve_detailed_study_by_nct_id`
+- `get_available_data_fields_metadata`
+- `get_available_search_filters`
+- `get_database_statistics`
+- `get_api_version_info`
 
 ### Troubleshooting
 

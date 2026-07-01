@@ -14,7 +14,7 @@ Devin's MCP configuration is typically done through project-level or workspace-l
 {
   "mcpServers": {
     "clinicaltrials": {
-      "url": "https://clinicaltrials-mcp-server-three.vercel.app",
+      "url": "https://clinicaltrials-mcp-server-three.vercel.app/mcp",
       "transport": "http"
     }
   }
@@ -27,7 +27,7 @@ Devin's MCP configuration is typically done through project-level or workspace-l
 {
   "mcpServers": {
     "clinicaltrials": {
-      "url": "https://clinicaltrials-mcp-server-three.vercel.app",
+      "url": "https://clinicaltrials-mcp-server-three.vercel.app/mcp",
       "transport": "http"
     }
   }
@@ -47,17 +47,18 @@ Once configured, you can ask Devin to:
 - "What filters can I use to search clinical trials?"
 - "Help me build an app that displays clinical trial data"
 
-### Available Endpoints
+### MCP Endpoint
 
-The hosted API provides the following endpoints:
-- Health check: https://clinicaltrials-mcp-server-three.vercel.app/health
-- Tools list: https://clinicaltrials-mcp-server-three.vercel.app/tools
-- Search trials: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/search_clinical_trials_by_criteria
-- Get study: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/retrieve_detailed_study_by_nct_id
-- Get fields: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_available_data_fields_metadata
-- Get filters: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_available_search_filters
-- Get stats: POST https://clinicaltrials-mcp-server-three.vercel.app/tools/get_database_statistics
-- API version: GET https://clinicaltrials-mcp-server-three.vercel.app/tools/get_api_version_info
+- MCP endpoint (Streamable HTTP): `https://clinicaltrials-mcp-server-three.vercel.app/mcp`
+- Health check: `https://clinicaltrials-mcp-server-three.vercel.app/health`
+
+The server exposes these MCP tools:
+- `search_clinical_trials_by_criteria`
+- `retrieve_detailed_study_by_nct_id`
+- `get_available_data_fields_metadata`
+- `get_available_search_filters`
+- `get_database_statistics`
+- `get_api_version_info`
 
 ### Example Devin Workflow
 

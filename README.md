@@ -25,16 +25,15 @@ npm run build
 
 ## Running
 
-### Local Development (HTTP API)
+### Local Development (MCP over HTTP)
 
 ```bash
 npm start
 ```
 
-The HTTP API will be available at:
+The MCP server (Streamable HTTP transport) will be available at:
+- MCP endpoint: `http://localhost:3000/mcp`
 - Health check: `http://localhost:3000/health`
-- Tools list: `http://localhost:3000/tools`
-- Tool endpoints: `http://localhost:3000/tools/{tool_name}`
 
 ### Local Development (MCP stdio)
 
@@ -46,29 +45,30 @@ npm run start:stdio
 
 ## Deployment
 
-### Vercel (HTTP API)
+### Vercel (MCP over HTTP)
 
-The server is deployed on Vercel at:
-- **Production**: https://clinicaltrials-mcp-server-three.vercel.app
+The server is deployed on Vercel as a remote MCP server (Streamable HTTP transport):
+- **MCP endpoint**: https://clinicaltrials-mcp-server-three.vercel.app/mcp
 - **Health check**: https://clinicaltrials-mcp-server-three.vercel.app/health
-- **Tools list**: https://clinicaltrials-mcp-server-three.vercel.app/tools
 
 ### MCP Configuration
 
-#### For HTTP API (Vercel)
+#### For Remote MCP (Vercel)
 
-Configure your MCP client to use the HTTP endpoints:
+Configure your MCP client to use the hosted MCP endpoint:
 
 ```json
 {
   "mcpServers": {
     "clinicaltrials": {
-      "url": "https://clinicaltrials-mcp-server-three.vercel.app",
+      "url": "https://clinicaltrials-mcp-server-three.vercel.app/mcp",
       "transport": "http"
     }
   }
 }
 ```
+
+See `MCP_CONFIG_CLAUDE.md`, `MCP_CONFIG_CURSOR.md`, and `MCP_CONFIG_DEVIN.md` for client-specific setup.
 
 #### For Local stdio
 
