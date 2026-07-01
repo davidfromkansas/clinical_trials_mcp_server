@@ -54,7 +54,15 @@ export class ClinicalTrialsAPIClient {
     if (params?.pageSize !== undefined && (params.pageSize < 1 || params.pageSize > 1000)) {
       throw new Error('pageSize must be between 1 and 1000');
     }
-    return this.fetch<StudySearchResponse>('/studies', params);
+    
+    // Transform queryTerm to query.term for API
+    const apiParams: any = { ...params };
+    if (apiParams.queryTerm) {
+      apiParams['query.term'] = apiParams.queryTerm;
+      delete apiParams.queryTerm;
+    }
+    
+    return this.fetch<StudySearchResponse>('/studies', apiParams);
   }
 
   async getStudy(nctId: string): Promise<Study> {
