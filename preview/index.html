@@ -759,14 +759,17 @@ svg.leaflet-image-layer.leaflet-interactive path {
       --other: #a855f7;
     }
     * { box-sizing: border-box; }
-    html, body { height: 100%; margin: 0; }
+    html, body { margin: 0; }
+    /* Fixed, reasonable height so the MCP host's autoResize reports a real size
+       instead of collapsing to a squished iframe. Falls back to full viewport
+       when opened standalone (preview / fullscreen). */
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background: var(--bg);
       color: var(--text);
       display: flex;
       flex-direction: column;
-      height: 100vh;
+      height: 560px;
       overflow: hidden;
     }
     header {
@@ -883,6 +886,19 @@ window.__MCP_DATA__ = {"query": {"condition": "diabetes", "status": "RECRUITING"
     var cluster = L.markerClusterGroup({ maxClusterRadius: 45, spiderfyOnMaxZoom: true });
     map.addLayer(cluster);
 
+    // The MCP host resizes the iframe after we report our size (autoResize).
+    // Leaflet must recompute its dimensions or tiles render at the old size.
+    var lastLatLngs = [];
+    function refitMap() {
+      map.invalidateSize();
+      if (lastLatLngs.length) map.fitBounds(lastLatLngs, { padding: [40, 40], maxZoom: 6 });
+    }
+    var refitTimer = null;
+    window.addEventListener("resize", function () {
+      clearTimeout(refitTimer);
+      refitTimer = setTimeout(refitMap, 120);
+    });
+
     var studyMarkers = {}; // nctId -> [markers]
     var onDetails = null;  // set by bridge mode
 
@@ -980,8 +996,11 @@ window.__MCP_DATA__ = {"query": {"condition": "diabetes", "status": "RECRUITING"
         (data.totalCount ? '<span class="count-pill">' + data.totalCount + " total matches</span> " : "") +
         (qStr ? " &nbsp; " + esc(qStr) : "");
 
+      lastLatLngs = allLatLngs;
       if (allLatLngs.length) map.fitBounds(allLatLngs, { padding: [40, 40], maxZoom: 6 });
       if (!data.studies.length) sidebar.innerHTML = '<div id="empty">No trials with mappable locations.</div>';
+      // Re-fit shortly after render in case the host is still resizing the iframe.
+      setTimeout(refitMap, 200);
     }
 
     function zoomToStudy(nctId) {
