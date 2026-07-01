@@ -11,14 +11,13 @@ import { errorResult } from '../lib/format.js';
 
 const MAP_RESOURCE_URI = 'ui://clinicaltrials/map';
 
-// Origins the map widget is allowed to load from (Leaflet + tiles + the App bridge).
+// Leaflet + the MCP App bridge are inlined into the HTML, so the ONLY external
+// resource the widget loads is map tile imagery from CARTO's CDN.
 const RESOURCE_DOMAINS = [
-  'https://unpkg.com',
   'https://a.basemaps.cartocdn.com',
   'https://b.basemaps.cartocdn.com',
   'https://c.basemaps.cartocdn.com',
   'https://d.basemaps.cartocdn.com',
-  'https://esm.sh',
 ];
 
 const STATUS_VALUES = [
@@ -133,7 +132,6 @@ export function registerSearchStudiesMap(server: McpServer, client: ClinicalTria
             ui: {
               csp: {
                 resourceDomains: RESOURCE_DOMAINS,
-                connectDomains: ['https://esm.sh'],
               },
             },
           },

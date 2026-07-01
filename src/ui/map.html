@@ -4,9 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Clinical Trials Map</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <!--__LEAFLET_CSS__-->
   <style>
     :root {
       --bg: #0f172a;
@@ -107,8 +105,7 @@
     <div id="map"></div>
   </div>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <!--__LEAFLET_JS__-->
   <script>
     // ---- Status color mapping -------------------------------------------------
     function statusColor(status) {
@@ -248,27 +245,33 @@
     if (window.__MCP_DATA__) renderApp(window.__MCP_DATA__);
     window.__renderApp = renderApp; // exposed for the bridge loader
   </script>
-  <!-- Bridge loader injected by the server build; no-op in standalone preview -->
-  <script type="module">
-    try {
-      const mod = await import("https://esm.sh/@modelcontextprotocol/ext-apps@1.7.4");
-      const app = new mod.App();
-      window.__renderApp && (window.__mcpApp = app);
-      app.ontoolresult = (params) => {
-        const sc = params && params.structuredContent;
-        if (sc) window.__renderApp(sc);
+  <!-- MCP App bridge bundle (inlined at build time); absent in standalone preview -->
+  <!--__BRIDGE_JS__-->
+  <script>
+    (function () {
+      var ExtApps = window.__ExtApps;
+      if (!ExtApps || !ExtApps.App) return; // standalone preview: baked data already rendered
+      var app;
+      try {
+        app = new ExtApps.App({ name: "clinicaltrials-map", version: "1.0.0" }, undefined, { autoResize: true });
+      } catch (e) { return; }
+      window.__mcpApp = app;
+      app.ontoolresult = function (result) {
+        var sc = result && result.structuredContent;
+        if (sc) renderApp(sc);
       };
-      onDetails = async (nctId) => {
-        try {
-          const res = await app.callServerTool({ name: "clinicaltrials_get_study", arguments: { nctId } });
-          const detail = res && res.structuredContent;
-          if (detail) alert(detail.title + "\n\n" + (detail.eligibilityCriteria || "").slice(0, 600));
-        } catch (e) { window.open("https://clinicaltrials.gov/study/" + encodeURIComponent(nctId), "_blank"); }
+      onDetails = function (nctId) {
+        app.callServerTool({ name: "clinicaltrials_get_study", arguments: { nctId } })
+          .then(function (res) {
+            var d = res && res.structuredContent;
+            if (d) alert((d.title || nctId) + "\n\n" + String(d.eligibilityCriteria || "").slice(0, 600));
+          })
+          .catch(function () {
+            window.open("https://clinicaltrials.gov/study/" + encodeURIComponent(nctId), "_blank");
+          });
       };
-      await app.connect();
-    } catch (e) {
-      // Standalone / non-MCP host: baked data (if any) already rendered.
-    }
+      app.connect().catch(function () {});
+    })();
   </script>
 </body>
 </html>
