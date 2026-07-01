@@ -117,4 +117,47 @@ describe('ClinicalTrialsAPIClient', () => {
       await expect(client.searchStudies()).rejects.toThrow('ClinicalTrials.gov rejected the request (400)');
     });
   });
+
+  describe('retry behavior', () => {
+    it('should retry transient 503 errors and eventually succeed', async () => {
+      (global.fetch as any)
+        .mockResolvedValueOnce({ ok: false, status: 503, statusText: 'Service Unavailable' })
+        .mockResolvedValueOnce({ ok: false, status: 503, statusText: 'Service Unavailable' })
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ studies: [], totalCount: 0 }) });
+
+      await expect(client.searchStudies()).resolves.toBeDefined();
+      expect((global.fetch as any).mock.calls.length).toBe(3);
+    });
+
+    it('should give up after 3 attempts on persistent 500', async () => {
+      (global.fetch as any).mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+      });
+
+      await expect(client.searchStudies()).rejects.toThrow('failed after 3 attempts');
+      expect((global.fetch as any).mock.calls.length).toBe(3);
+    });
+
+    it('should NOT retry deterministic 400 errors', async () => {
+      (global.fetch as any).mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+      });
+
+      await expect(client.searchStudies()).rejects.toThrow('400');
+      expect((global.fetch as any).mock.calls.length).toBe(1);
+    });
+
+    it('should retry network errors', async () => {
+      (global.fetch as any)
+        .mockRejectedValueOnce(new Error('ECONNRESET'))
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ studies: [], totalCount: 0 }) });
+
+      await expect(client.searchStudies()).resolves.toBeDefined();
+      expect((global.fetch as any).mock.calls.length).toBe(2);
+    });
+  });
 });

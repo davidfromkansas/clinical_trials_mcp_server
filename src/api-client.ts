@@ -9,6 +9,13 @@ import {
 
 const BASE_URL = 'https://clinicaltrials.gov/api/v2';
 const REQUEST_TIMEOUT_MS = 30000;
+const MAX_ATTEMPTS = 3;
+const BASE_BACKOFF_MS = 300;
+
+/** HTTP status codes worth retrying (transient upstream conditions). */
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Error thrown by the API client, carrying an actionable, agent-facing message. */
 export class ClinicalTrialsApiError extends Error {
@@ -75,19 +82,52 @@ export class ClinicalTrialsAPIClient {
       });
     }
 
+    // Retry transient upstream failures (timeouts, network errors, 429/5xx)
+    // with exponential backoff. Deterministic client errors (4xx except 429)
+    // are surfaced immediately without retrying.
+    let lastError: ClinicalTrialsApiError | undefined;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this.fetchOnce<T>(url.toString(), attempt);
+      } catch (error) {
+        const apiError =
+          error instanceof ClinicalTrialsApiError
+            ? error
+            : new ClinicalTrialsApiError(
+                `Unexpected error contacting ClinicalTrials.gov: ${error instanceof Error ? error.message : String(error)}`
+              );
+        lastError = apiError;
+
+        const isRetryable =
+          apiError.status === undefined || RETRYABLE_STATUS.has(apiError.status);
+        if (!isRetryable || attempt === MAX_ATTEMPTS) {
+          throw this.withAttemptContext(apiError, attempt);
+        }
+
+        // Exponential backoff: 300ms, 600ms, ...
+        await sleep(BASE_BACKOFF_MS * 2 ** (attempt - 1));
+      }
+    }
+
+    // Unreachable, but satisfies the type checker.
+    throw lastError ?? new ClinicalTrialsApiError('Request failed for an unknown reason.');
+  }
+
+  private async fetchOnce<T>(url: string, attempt: number): Promise<T> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     let response: Response;
     try {
-      response = await fetch(url.toString(), {
+      response = await fetch(url, {
         headers: { Accept: 'application/json' },
         signal: controller.signal,
       });
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw new ClinicalTrialsApiError(
-          `Request to ClinicalTrials.gov timed out after ${REQUEST_TIMEOUT_MS / 1000}s. Try again or narrow your query.`
+          `Request to ClinicalTrials.gov timed out after ${REQUEST_TIMEOUT_MS / 1000}s (attempt ${attempt}/${MAX_ATTEMPTS}).`
         );
       }
       throw new ClinicalTrialsApiError(
@@ -105,6 +145,17 @@ export class ClinicalTrialsAPIClient {
     }
 
     return response.json() as Promise<T>;
+  }
+
+  /** Append retry context to the message when all attempts are exhausted. */
+  private withAttemptContext(error: ClinicalTrialsApiError, attempt: number): ClinicalTrialsApiError {
+    const wasRetried =
+      attempt > 1 && (error.status === undefined || RETRYABLE_STATUS.has(error.status));
+    if (!wasRetried) return error;
+    return new ClinicalTrialsApiError(
+      `${error.message} (failed after ${attempt} attempts)`,
+      error.status
+    );
   }
 
   private describeHttpError(status: number, statusText: string): string {
