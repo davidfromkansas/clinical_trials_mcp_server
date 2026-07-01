@@ -1,129 +1,67 @@
-import express from 'express';
-import { ClinicalTrialsAPIClient } from './api-client.js';
-import {
-  searchStudiesTool,
-  handleSearchStudies,
-} from './tools/search-studies.js';
-import {
-  getStudyTool,
-  handleGetStudy,
-} from './tools/get-study.js';
-import {
-  getStudyFieldsTool,
-  handleGetStudyFields,
-} from './tools/get-study-fields.js';
-import {
-  getSearchAreasTool,
-  handleGetSearchAreas,
-} from './tools/get-search-areas.js';
-import {
-  getDatasetStatsTool,
-  handleGetDatasetStats,
-} from './tools/get-dataset-stats.js';
-import {
-  getAPIVersionTool,
-  handleGetAPIVersion,
-} from './tools/get-api-version.js';
+import express, { Request, Response } from 'express';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { createMcpServer } from './mcp-server.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-const client = new ClinicalTrialsAPIClient();
-
-// List all available tools
-app.get('/tools', (req, res) => {
-  res.json({
-    tools: [
-      searchStudiesTool,
-      getStudyTool,
-      getStudyFieldsTool,
-      getSearchAreasTool,
-      getDatasetStatsTool,
-      getAPIVersionTool,
-    ],
+// Handle an MCP request in stateless mode: a fresh server + transport per request.
+// This works cleanly on serverless platforms like Vercel where state is not shared.
+async function handleMcpRequest(req: Request, res: Response) {
+  const server = createMcpServer();
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
   });
-});
 
-// Tool execution endpoints
-app.post('/tools/search_clinical_trials_by_criteria', async (req, res) => {
-  try {
-    const result = await handleSearchStudies(client, req.body);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
+  res.on('close', () => {
+    transport.close();
+    server.close();
+  });
 
-app.post('/tools/retrieve_detailed_study_by_nct_id', async (req, res) => {
   try {
-    const result = await handleGetStudy(client, req.body);
-    res.json(result);
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
   } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : String(error),
-    });
+    console.error('Error handling MCP request:', error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: '2.0',
+        error: { code: -32603, message: 'Internal server error' },
+        id: null,
+      });
+    }
   }
-});
+}
 
-app.get('/tools/get_available_data_fields_metadata', async (req, res) => {
-  try {
-    const result = await handleGetStudyFields(client);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
+// MCP endpoint (Streamable HTTP transport). Clients POST JSON-RPC messages here.
+app.post('/mcp', handleMcpRequest);
+app.post('/', handleMcpRequest);
 
-app.get('/tools/get_available_search_filters', async (req, res) => {
-  try {
-    const result = await handleGetSearchAreas(client);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
+// Stateless mode does not support server-initiated SSE streams or session termination.
+function methodNotAllowed(_req: Request, res: Response) {
+  res.status(405).json({
+    jsonrpc: '2.0',
+    error: { code: -32000, message: 'Method not allowed. Use POST for MCP requests.' },
+    id: null,
+  });
+}
 
-app.post('/tools/get_database_statistics', async (req, res) => {
-  try {
-    const result = await handleGetDatasetStats(client, req.body);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
-
-app.get('/tools/get_api_version_info', async (req, res) => {
-  try {
-    const result = await handleGetAPIVersion(client);
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-});
+app.get('/mcp', methodNotAllowed);
+app.delete('/mcp', methodNotAllowed);
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok', version: '1.0.0' });
 });
 
 // Start server for local development
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
-    console.log(`HTTP API Server running on port ${PORT}`);
+    console.log(`MCP HTTP Server running on port ${PORT}`);
+    console.log(`MCP endpoint: http://localhost:${PORT}/mcp`);
     console.log(`Health check: http://localhost:${PORT}/health`);
-    console.log(`Tools list: http://localhost:${PORT}/tools`);
   });
 }
 
