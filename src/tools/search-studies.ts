@@ -93,7 +93,7 @@ export async function handleSearchStudies(
     nctId: study.protocolSection?.identificationModule?.nctId || 'Unknown',
     title: study.protocolSection?.identificationModule?.briefTitle || 'Unknown',
     status: study.protocolSection?.statusModule?.overallStatus || 'Unknown',
-    conditions: study.protocolSection?.conditionsModule?.conditions?.map((c: any) => c.name) || [],
+    conditions: (study.protocolSection?.conditionsModule?.conditions || []).map((c: any) => c.name || c).filter(Boolean),
     sponsor: study.protocolSection?.sponsorCollaboratorsModule?.leadSponsor?.name || 'Unknown',
   }));
 

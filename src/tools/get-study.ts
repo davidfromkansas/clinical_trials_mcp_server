@@ -42,10 +42,10 @@ export async function handleGetStudy(
       name: i.name,
     })) || [],
     locations: (study.protocolSection.contactsLocationsModule?.locations || []).map((l: any) => ({
-      facility: l.facility?.name || 'Unknown',
-      city: l.facility?.address?.city || 'Unknown',
-      state: l.facility?.address?.state || 'Unknown',
-      country: l.facility?.address?.country || 'Unknown',
+      facility: l.facility || 'Unknown',
+      city: l.city || 'Unknown',
+      state: l.state || 'Unknown',
+      country: l.country || 'Unknown',
       status: l.status || 'Unknown',
     })),
   };
