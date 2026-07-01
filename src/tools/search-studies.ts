@@ -84,14 +84,17 @@ export async function handleSearchStudies(
   if (args.pageSize) params.pageSize = args.pageSize;
   if (args.pageToken) params.pageToken = args.pageToken;
 
+  // Default pageSize if not provided
+  if (!params.pageSize) params.pageSize = 10;
+
   const response = await client.searchStudies(params);
   
-  const studies = response.studies.map((study: any) => ({
-    nctId: study.protocolSection.identificationModule.nctId,
-    title: study.protocolSection.identificationModule.briefTitle,
-    status: study.protocolSection.statusModule.overallStatus,
-    conditions: study.protocolSection.conditionsModule?.conditions?.map((c: any) => c.name) || [],
-    sponsor: study.protocolSection.sponsorCollaboratorsModule?.leadSponsor?.name || 'Unknown',
+  const studies = (response.studies || []).map((study: any) => ({
+    nctId: study.protocolSection?.identificationModule?.nctId || 'Unknown',
+    title: study.protocolSection?.identificationModule?.briefTitle || 'Unknown',
+    status: study.protocolSection?.statusModule?.overallStatus || 'Unknown',
+    conditions: study.protocolSection?.conditionsModule?.conditions?.map((c: any) => c.name) || [],
+    sponsor: study.protocolSection?.sponsorCollaboratorsModule?.leadSponsor?.name || 'Unknown',
   }));
 
   return {
@@ -100,7 +103,7 @@ export async function handleSearchStudies(
         type: 'text',
         text: JSON.stringify({
           studies,
-          totalCount: response.totalCount,
+          totalCount: response.totalCount || 0,
           nextPageToken: response.nextPageToken,
         }, null, 2),
       },

@@ -41,13 +41,13 @@ export async function handleGetStudy(
       type: i.interventionType,
       name: i.name,
     })) || [],
-    locations: study.protocolSection.contactsLocationsModule?.locations?.map((l: any) => ({
-      facility: l.facility.name,
-      city: l.facility.address.city,
-      state: l.facility.address.state,
-      country: l.facility.address.country,
-      status: l.status,
-    })) || [],
+    locations: (study.protocolSection.contactsLocationsModule?.locations || []).map((l: any) => ({
+      facility: l.facility?.name || 'Unknown',
+      city: l.facility?.address?.city || 'Unknown',
+      state: l.facility?.address?.state || 'Unknown',
+      country: l.facility?.address?.country || 'Unknown',
+      status: l.status || 'Unknown',
+    })),
   };
 
   return {
