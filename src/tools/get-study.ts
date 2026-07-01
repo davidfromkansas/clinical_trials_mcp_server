@@ -23,7 +23,7 @@ const outputSchema = {
   sponsor: z.string().optional(),
   eligibilityCriteria: z.string().optional(),
   healthyVolunteers: z.boolean().optional(),
-  gender: z.string().optional(),
+  sex: z.string().optional(),
   minimumAge: z.string().optional(),
   maximumAge: z.string().optional(),
   interventions: z.array(z.object({ type: z.string().optional(), name: z.string().optional() })),
@@ -72,7 +72,7 @@ export function registerGetStudy(server: McpServer, client: ClinicalTrialsAPICli
           sponsor: p?.sponsorCollaboratorsModule?.leadSponsor?.name,
           eligibilityCriteria: p?.eligibilityModule?.eligibilityCriteria,
           healthyVolunteers: p?.eligibilityModule?.healthyVolunteers,
-          gender: p?.eligibilityModule?.gender,
+          sex: p?.eligibilityModule?.sex ?? p?.eligibilityModule?.gender,
           minimumAge: p?.eligibilityModule?.minimumAge,
           maximumAge: p?.eligibilityModule?.maximumAge,
           interventions: (p?.armsInterventionsModule?.interventions || []).map((i: any) => ({

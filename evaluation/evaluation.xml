@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Evaluation set for the clinicaltrials-mcp-server, following the Anthropic
+  mcp-builder skill (Phase 4). Each question is independent, read-only,
+  requires one or more tool calls (typically clinicaltrials_search_studies to
+  locate a trial, then clinicaltrials_get_study to extract a fact), and has a
+  single verifiable answer. Answers are anchored to COMPLETED trials so the
+  underlying facts are stable over time.
+-->
+<evaluation>
+  <qa_pair>
+    <question>For the ACCORD trial (Action to Control Cardiovascular Risk in Diabetes, NCT00000620), what is the minimum eligibility age listed for participants?</question>
+    <answer>40 Years</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>For the ACCORD trial (Action to Control Cardiovascular Risk in Diabetes, NCT00000620), what is the maximum eligibility age listed for participants?</question>
+    <answer>79 Years</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Which sex is eligible to participate in the ACCORD trial, NCT00000620? Answer with ALL, FEMALE, or MALE.</question>
+    <answer>ALL</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Who is the lead sponsor of the Adaptive COVID-19 Treatment Trial (ACTT), NCT04280705?</question>
+    <answer>National Institute of Allergy and Infectious Diseases (NIAID)</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>In the Adaptive COVID-19 Treatment Trial (ACTT, NCT04280705), which antiviral drug was studied against placebo?</question>
+    <answer>Remdesivir</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Does the Adaptive COVID-19 Treatment Trial (ACTT, NCT04280705) accept healthy volunteers? Answer Yes or No.</question>
+    <answer>No</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>The JAVELIN Lung 100 trial (NCT02576574) studied a first-line treatment for non-small cell lung cancer. Which anti-PD-L1 immunotherapy antibody was being tested?</question>
+    <answer>Avelumab</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>What is the minimum eligibility age for the Pfizer/BioNTech COVID-19 vaccine study, NCT04368728?</question>
+    <answer>12 Years</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>A first-line advanced gastric/gastroesophageal junction adenocarcinoma trial (NCT02545504) tested the matrix metalloproteinase 9 inhibitor andecaliximab combined with mFOLFOX6. Which company is the lead sponsor of that trial?</question>
+    <answer>Gilead Sciences</answer>
+  </qa_pair>
+  <qa_pair>
+    <question>Who is the lead sponsor of the Pfizer/BioNTech COVID-19 vaccine study, NCT04368728?</question>
+    <answer>BioNTech SE</answer>
+  </qa_pair>
+</evaluation>

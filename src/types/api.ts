@@ -31,10 +31,12 @@ export interface Study {
     };
     eligibilityModule?: {
       eligibilityCriteria: string;
-      healthyVolunteers?: string;
+      healthyVolunteers?: boolean;
+      sex?: string;
       gender?: string;
       minimumAge?: string;
       maximumAge?: string;
+      stdAges?: string[];
     };
     sponsorCollaboratorsModule?: {
       leadSponsor: Sponsor;
